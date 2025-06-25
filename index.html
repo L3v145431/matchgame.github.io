@@ -14,8 +14,8 @@
             background-color: #FFFFFF;
             margin: 0;
             padding: 20px;
-            height: 100vh;
-            overflow: hidden;
+            min-height: 100vh;
+            box-sizing: border-box;
         }
 
         h1 {
@@ -23,19 +23,22 @@
             margin-bottom: 20px;
             font-size: 2.5em;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            text-align: center;
         }
 
         .game-container {
             display: flex;
             justify-content: center;
-            gap: 200px;
-            position: relative;
+            gap: 20px;
+            width: 100%;
+            max-width: 600px;
         }
 
         .column {
             display: flex;
             flex-direction: column;
-            gap: 40px;
+            gap: 20px;
+            flex: 1;
         }
 
         .item {
@@ -51,6 +54,7 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             transition: transform 0.3s, background-color 0.3s;
             flex-direction: column;
+            margin: 0 auto;
         }
 
         .item:hover {
@@ -135,7 +139,7 @@
     </style>
 </head>
 <body>
-    <h1>¡Empareja las Imagenes!</h1>
+    <h1>¡Empareja las Imágenes!</h1>
     <div class="game-container">
         <div class="column" id="left-column">
             <!-- Los elementos se cargarán dinámicamente -->
@@ -216,8 +220,8 @@
                     const rect = startItem.getBoundingClientRect();
                     activeLine = document.createElement('div');
                     activeLine.className = 'line';
-                    activeLine.style.left = (rect.left + rect.width / 1) + 'px';
-                    activeLine.style.top = (rect.top + rect.height / 1) + 'px';
+                    activeLine.style.left = (rect.left + rect.width / 2) + 'px';
+                    activeLine.style.top = (rect.top + rect.height / 2) + 'px';
                     activeLine.style.width = '0px';
                     document.body.appendChild(activeLine);
                     e.preventDefault();
