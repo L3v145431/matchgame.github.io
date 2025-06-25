@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juego de Emparejamiento</title>
+    <style>
+        body {
+            font-family: 'Comic Sans MS', cursive, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            background-color: #FFFFFF;
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        h1 {
+            color: #FFBC00;
+            margin-bottom: 20px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .game-container {
+            display: flex;
+            justify-content: center;
+            gap: 200px;
+            position: relative;
+        }
+
+        .column {
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        .item {
+            width: 80px;
+            height: 80px;
+            background-color: #E2E2E2;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s, background-color 0.3s;
+            flex-direction: column;
+        }
+
+        .item:hover {
+            transform: scale(1.1);
+        }
+
+        .item img {
+            max-width: 60%;
+            max-height: 60%;
+        }
+
+        .item-text {
+            font-size: 0.8em;
+            margin-top: 5px;
+            text-align: center;
+        }
+
+        .line {
+            position: absolute;
+            background-color: #FCD307;
+            height: 4px;
+            z-index: -1;
+            transform-origin: 0 0;
+        }
+
+        .matched {
+            background-color: #FFBC00;
+            color: white;
+            animation: bounce 0.5s;
+        }
+
+        .error:not(.matched) {
+            animation: shake 0.5s;
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.2);
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% {
+                transform: translateX(0);
+            }
+            20%, 60% {
+                transform: translateX(-10px);
+            }
+            40%, 80% {
+                transform: translateX(10px);
+            }
+        }
+
+        #celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 100;
+            color: white;
+            font-size: 3em;
+            flex-direction: column;
+        }
+
+        #play-again {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 1em;
+            background-color: #FFBC00;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>¡Empareja las Imagenes!</h1>
+    <div class="game-container">
+        <div class="column" id="left-column">
+            <!-- Los elementos se cargarán dinámicamente -->
+        </div>
+        <div class="column" id="right-column">
+            <!-- Los elementos se cargarán dinámicamente -->
+        </div>
+    </div>
+
+    <div id="celebration">
+        ¡Felicidades! ¡Has ganado!
+        <button id="play-again">Jugar otra vez</button>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.4.0/dist/confetti.browser.min.js"></script>
+    <script>
+        function loadSettings() {
+            const bgColor = localStorage.getItem('bgColor') || '#FFFFFF';
+            const numSquares = parseInt(localStorage.getItem('numSquares')) || 3;
+
+            document.body.style.backgroundColor = bgColor;
+
+            const leftColumn = document.getElementById('left-column');
+            const rightColumn = document.getElementById('right-column');
+
+            leftColumn.innerHTML = '';
+            rightColumn.innerHTML = '';
+
+            const leftItems = [];
+            const rightItems = [];
+
+            for (let i = 1; i <= numSquares; i++) {
+                const imageSrc = localStorage.getItem(`image${i}`);
+                const text = localStorage.getItem(`text${i}`) || '';
+                leftItems.push({ value: i.toString(), image: imageSrc, text: text });
+                rightItems.push({ value: i.toString(), image: imageSrc, text: text });
+            }
+
+            rightItems.sort(() => Math.random() - 0.5);
+
+            leftItems.forEach(item => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'item';
+                itemElement.dataset.value = item.value;
+                itemElement.innerHTML = `
+                    ${item.image ? `<img src="${item.image}" alt="Item ${item.value}">` : ''}
+                    <div class="item-text">${item.text}</div>
+                `;
+                leftColumn.appendChild(itemElement);
+            });
+
+            rightItems.forEach(item => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'item';
+                itemElement.dataset.value = item.value;
+                itemElement.innerHTML = `
+                    ${item.image ? `<img src="${item.image}" alt="Item ${item.value}">` : ''}
+                    <div class="item-text">${item.text}</div>
+                `;
+                rightColumn.appendChild(itemElement);
+            });
+
+            setupGame();
+        }
+
+        function setupGame() {
+            const leftItems = document.querySelectorAll('#left-column .item');
+            const rightItems = document.querySelectorAll('#right-column .item');
+            let matchedPairs = 0;
+            let activeLines = [];
+
+            let activeLine = null;
+            let startItem = null;
+
+            leftItems.forEach(item => {
+                item.addEventListener('mousedown', function(e) {
+                    startItem = item;
+                    const rect = startItem.getBoundingClientRect();
+                    activeLine = document.createElement('div');
+                    activeLine.className = 'line';
+                    activeLine.style.left = (rect.left + rect.width / 1) + 'px';
+                    activeLine.style.top = (rect.top + rect.height / 1) + 'px';
+                    activeLine.style.width = '0px';
+                    document.body.appendChild(activeLine);
+                    e.preventDefault();
+                });
+            });
+
+            document.addEventListener('mousemove', function(e) {
+                if (startItem && activeLine) {
+                    const startRect = startItem.getBoundingClientRect();
+                    const dx = e.clientX - (startRect.left + startRect.width / 2);
+                    const dy = e.clientY - (startRect.top + startRect.height / 2);
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    activeLine.style.width = distance + 'px';
+                    activeLine.style.transform = `rotate(${Math.atan2(dy, dx)}rad)`;
+                }
+            });
+
+            rightItems.forEach(item => {
+                item.addEventListener('mouseup', function(e) {
+                    if (startItem && activeLine) {
+                        if (startItem.dataset.value === item.dataset.value) {
+                            startItem.classList.add('matched');
+                            item.classList.add('matched');
+                            matchedPairs++;
+                            activeLines.push(activeLine);
+                            if (matchedPairs === leftItems.length) {
+                                celebrate();
+                            }
+                        } else {
+                            startItem.classList.add('error');
+                            item.classList.add('error');
+                            setTimeout(() => {
+                                startItem.classList.remove('error');
+                                item.classList.remove('error');
+                            }, 500);
+                            activeLine.remove();
+                        }
+                        activeLine = null;
+                        startItem = null;
+                    }
+                });
+            });
+
+            document.addEventListener('mouseup', function() {
+                if (activeLine && !activeLines.includes(activeLine)) {
+                    activeLine.remove();
+                }
+                activeLine = null;
+                startItem = null;
+            });
+        }
+
+        function celebrate() {
+            const celebration = document.getElementById('celebration');
+            celebration.style.display = 'flex';
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+
+            document.getElementById('play-again').addEventListener('click', function() {
+                location.reload();
+            });
+        }
+
+        window.onload = loadSettings;
+    </script>
+</body>
+</html>
